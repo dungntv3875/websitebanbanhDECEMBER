@@ -74,7 +74,7 @@ $qr_url = "https://img.vietqr.io/image/{$BANK_ID}-{$ACCOUNT_NO}-template.png?amo
         </div>
 
         <div class="d-grid gap-2">
-            <a href="index.php" class="btn btn-success-custom">Tôi đã chuyển khoản xong</a>
+            <a href="thanks.php?order_id=<?php echo $order_id; ?>" class="btn btn-success-custom">Tôi đã chuyển khoản xong</a>
             <a href="checkout.php" class="text-secondary small mt-2 text-decoration-none">Quay lại trang thanh toán</a>
         </div>
     </div>
