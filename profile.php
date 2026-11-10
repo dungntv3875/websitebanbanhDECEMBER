@@ -278,9 +278,10 @@ function statusLabel($status) {
                                 $rv_key = $item['product_id'] . '_' . $order['id'];
                                 if ($order['status'] === 'done'): ?>
                                     <?php if (!empty($reviewed_map[$rv_key])): ?>
-                                        <div style="font-size:12px;color:#27ae60;margin-top:6px;">
-                                            <i class="fa-solid fa-circle-check"></i> Đã đánh giá
-                                        </div>
+                                        <a class="btn-review-inline mt-2 text-decoration-none"
+                                            href="product.php?id=<?php echo $item['product_id']; ?>#reviews">
+                                            <i class="fa-regular fa-eye me-1"></i> Xem đánh giá
+                                        </a>
                                     <?php else: ?>
                                         <button class="btn-review-inline mt-2"
                                             onclick="openReviewModal(<?php echo $item['product_id']; ?>, <?php echo $order['id']; ?>, '<?php echo htmlspecialchars($item['name'], ENT_QUOTES); ?>', 'uploads/<?php echo $thumb; ?>')">

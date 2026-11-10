@@ -242,7 +242,7 @@ if ($user_id) {
 
     </div>
 <!-- ===== KHU VỰC ĐÁNH GIÁ ===== -->
-<div class="review-section mt-5">
+<div id="reviews" class="review-section mt-5">
     <h4 class="fw-bold mb-4">Đánh giá sản phẩm</h4>
 
     <!-- TỔNG QUAN SAO -->
