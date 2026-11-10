@@ -19,6 +19,10 @@ if (!empty($_SESSION['checkout_error'])) {
     $checkout_error = '';
 }
 
+// Dữ liệu khách đã nhập (khi form bị trả lại do lỗi)
+$old = $_SESSION['checkout_old'] ?? [];
+unset($_SESSION['checkout_old']);
+
 // 2. Xác định danh sách sản phẩm cần thanh toán
 $checkout_items = [];
 $total_all = 0;
@@ -50,6 +54,28 @@ if (empty($checkout_items)) {
     exit;
 }
 
+
+// 3b. Kiểm tra tồn kho ngay khi vào trang thanh toán (chặn sớm nếu người khác đã mua mất hàng)
+$stmtStockChk = $pdo->prepare("SELECT name, stock FROM products WHERE id = ?");
+foreach ($checkout_items as $chk) {
+    $stmtStockChk->execute([$chk['id']]);
+    $pr = $stmtStockChk->fetch(PDO::FETCH_ASSOC);
+    $left = $pr ? (int)$pr['stock'] : 0;
+    if ($left < (int)$chk['qty']) {
+        $pname = $pr['name'] ?? 'Sản phẩm';
+        $m = $left <= 0
+            ? 'Sản phẩm "' . $pname . '" đã hết hàng.'
+            : 'Sản phẩm "' . $pname . '" chỉ còn ' . $left . ' sản phẩm (bạn chọn ' . (int)$chk['qty'] . '). Vui lòng giảm số lượng.';
+        if (isset($_SESSION['checkout_mode']) && $_SESSION['checkout_mode'] === 'buy_now') {
+            $_SESSION['stock_error'] = $m;
+            header('Location: product.php?id=' . (int)$chk['id']);
+        } else {
+            $_SESSION['cart_error'] = $m;
+            header('Location: cart.php');
+        }
+        exit;
+    }
+}
 
 // 4. Tính tổng tiền
 foreach ($checkout_items as $item) {
@@ -95,14 +121,15 @@ $total_final = $total_all + $ship_fee;
                         </div>
                         
                         <input type="email" class="form-control" value="<?php echo $user_email; ?>" readonly>
-                        <input type="text" name="fullname" class="form-control" placeholder="Họ và tên" value="<?php echo $user_name; ?>" required>
+                        <input type="text" name="fullname" class="form-control" placeholder="Họ và tên" value="<?php echo htmlspecialchars($old['fullname'] ?? $user_name); ?>" required>
                         <input type="text" name="phone" class="form-control" placeholder="Số điện thoại (VD: 0912345678)"
+                        value="<?php echo htmlspecialchars($old['phone'] ?? ''); ?>"
                         maxlength="10"
-                        pattern="0[0-9]{9}"
-                        title="Số điện thoại phải bắt đầu bằng số 0 và đủ 10 chữ số"
+                        pattern="(03|05|07|08|09)[0-9]{8}"
+                        title="Số điện thoại gồm 10 số, bắt đầu bằng 03, 05, 07, 08 hoặc 09"
                         oninput="this.value=this.value.replace(/[^0-9]/g,'')"
                          required>
-                        <input type="text" name="address" class="form-control" placeholder="Địa chỉ (Số nhà, tên đường...)" required>
+                        <input type="text" name="address" class="form-control" placeholder="Địa chỉ (Số nhà, tên đường...)" value="<?php echo htmlspecialchars($old['address'] ?? ''); ?>" required>
                         <div class="small text-warning mt-2 mb-2">Chỉ hỗ trợ giao hàng trong nội thành Hà Nội.</div>
                         
                         <div class="row">
@@ -125,7 +152,7 @@ $total_final = $total_all + $ship_fee;
 </div>
                         </div>
                         
-                        <textarea name="note" class="form-control" rows="3" placeholder="Ghi chú (tùy chọn)"></textarea>
+                        <textarea name="note" class="form-control" rows="3" placeholder="Ghi chú (tùy chọn)"><?php echo htmlspecialchars($old['note'] ?? ''); ?></textarea>
                     </div>
                 </div>
 
@@ -147,6 +174,7 @@ $total_final = $total_all + $ship_fee;
         </label>
         <img src="https://img.icons8.com/color/48/000000/bank-card-back-side.png" width="24">
     </div>
+
 </div>
             </div>
 
