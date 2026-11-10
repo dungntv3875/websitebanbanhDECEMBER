@@ -80,7 +80,7 @@ $is_logged_in = isset($_SESSION['user']) ? 'true' : 'false';
 
 <script>
 // Lấy trạng thái đăng nhập từ PHP (true nếu đã đăng nhập, false nếu chưa)
-const isLoggedIn = <?php echo $user_id ? 'true' : 'false'; ?>;
+isLoggedIn = <?php echo isset($_SESSION['user']) ? 'true' : 'false'; ?>;
 
 document.querySelectorAll('.btn-favorite').forEach(btn => {
     btn.addEventListener('click', function(e){
