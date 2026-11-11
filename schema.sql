@@ -422,6 +422,3 @@ COMMIT;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 -- Chạy 1 lần trong phpMyAdmin (tab SQL) trên database donut_december
-ALTER TABLE `orders`
-  ADD COLUMN `payment_status` VARCHAR(20) NOT NULL DEFAULT 'unpaid' AFTER `payment_method`,
--- payment_status: unpaid (chưa thanh toán / COD / chờ chuyển khoản) 
