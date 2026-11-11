@@ -69,35 +69,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['request_cancel'])) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['request_return'])) {
     $order_id = (int)$_POST['order_id'];
     $reason   = trim($_POST['reason']);
-    $stmt = $pdo->prepare("SELECT status FROM orders WHERE id = ? AND user_id = ?");
+    $stmt = $pdo->prepare("SELECT id, status, created_at FROM orders WHERE id = ? AND user_id = ?");
     $stmt->execute([$order_id, $user_id]);
     $ord = $stmt->fetch();
     if ($ord && $ord['status'] === 'done' && $reason !== '') {
-    $stmtChk = $pdo->prepare("SELECT id FROM order_returns WHERE order_id = ? AND status = 'pending'");
-    $stmtChk->execute([$order_id]);
-    if (!$stmtChk->fetch()) {
-        // Xử lý upload ảnh
-        $return_image = null;
-        if (!empty($_FILES['return_image']['name'])) {
-            $allowed = ['jpg','jpeg','png','webp'];
-            $ext = strtolower(pathinfo($_FILES['return_image']['name'], PATHINFO_EXTENSION));
-            if (in_array($ext, $allowed) && $_FILES['return_image']['size'] <= 5*1024*1024) {
-                $return_image = 'return_' . uniqid() . '.' . $ext;
-                move_uploaded_file($_FILES['return_image']['tmp_name'], 'uploads/' . $return_image);
-            }
-        }
-        $pdo->prepare("INSERT INTO order_returns (order_id, user_id, reason, image) VALUES (?,?,?,?)")
-            ->execute([$order_id, $user_id, $reason, $return_image]);
-            $msg = 'Đã gửi yêu cầu hoàn hàng, vui lòng chờ admin xét duyệt.';
-            $msg_type = 'success';
-        } else {
-            $msg = 'Bạn đã gửi yêu cầu hoàn hàng cho đơn này rồi.';
+        $createdAt = new DateTime($ord['created_at'], new DateTimeZone('Asia/Ho_Chi_Minh'));
+        $deadline = (clone $createdAt)->modify('+2 hours');
+        $now = new DateTime('now', new DateTimeZone('Asia/Ho_Chi_Minh'));
+
+        if ($now > $deadline) {
+            $msg = 'Đã quá 2 giờ sau khi nhận hàng, nên không thể gửi yêu cầu hoàn hàng.';
             $msg_type = 'danger';
+        } else {
+            $stmtChk = $pdo->prepare("SELECT id FROM order_returns WHERE order_id = ? AND status = 'pending'");
+            $stmtChk->execute([$order_id]);
+            if (!$stmtChk->fetch()) {
+                // Xử lý upload ảnh
+                $return_image = null;
+                if (!empty($_FILES['return_image']['name'])) {
+                    $allowed = ['jpg','jpeg','png','webp'];
+                    $ext = strtolower(pathinfo($_FILES['return_image']['name'], PATHINFO_EXTENSION));
+                    if (in_array($ext, $allowed) && $_FILES['return_image']['size'] <= 5*1024*1024) {
+                        $return_image = 'return_' . uniqid() . '.' . $ext;
+                        move_uploaded_file($_FILES['return_image']['tmp_name'], 'uploads/' . $return_image);
+                    }
+                }
+                $pdo->prepare("INSERT INTO order_returns (order_id, user_id, reason, image) VALUES (?,?,?,?)")
+                    ->execute([$order_id, $user_id, $reason, $return_image]);
+                $msg = 'Đã gửi yêu cầu hoàn hàng, vui lòng chờ admin xét duyệt.';
+                $msg_type = 'success';
+            } else {
+                $msg = 'Bạn đã gửi yêu cầu hoàn hàng cho đơn này rồi.';
+                $msg_type = 'danger';
+            }
         }
     }
     $tab = 'orders';
 }
-
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_password'])) {
     $old_pass     = $_POST['old_password'] ?? '';
@@ -167,6 +175,25 @@ function statusLabel($status) {
         case 'cancelled': return ['label' => 'Đã hủy',       'color' => '#e74c3c'];
         default:          return ['label' => $status,         'color' => '#999'];
     }
+}
+
+function canRequestReturnWithinWindow($orderCreatedAt) {
+    if (!$orderCreatedAt) return false;
+    $createdAt = new DateTime($orderCreatedAt, new DateTimeZone('Asia/Ho_Chi_Minh'));
+    $deadline = (clone $createdAt)->modify('+2 hours');
+    $now = new DateTime('now', new DateTimeZone('Asia/Ho_Chi_Minh'));
+    return $now <= $deadline;
+}
+
+function returnWindowNote($orderCreatedAt) {
+    if (!$orderCreatedAt) return 'Không xác định được thời hạn hoàn hàng.';
+    $createdAt = new DateTime($orderCreatedAt, new DateTimeZone('Asia/Ho_Chi_Minh'));
+    $deadline = (clone $createdAt)->modify('+2 hours');
+    $now = new DateTime('now', new DateTimeZone('Asia/Ho_Chi_Minh'));
+    if ($now > $deadline) {
+        return 'Đã quá 2 giờ sau khi nhận hàng nên không thể hoàn hàng.';
+    }
+    return 'Còn thời gian hoàn hàng trong 2 giờ sau khi nhận hàng.';
 }
 ?>
 <!DOCTYPE html>
@@ -319,17 +346,34 @@ function statusLabel($status) {
                         <?php endif; ?>
 
                         <?php if ($order['status'] === 'done'): ?>
+                            <?php
+                                $returnAllowed = !isset($return_map[$order['id']]) && canRequestReturnWithinWindow($order['created_at']);
+                                $returnWindowText = returnWindowNote($order['created_at']);
+                            ?>
                             <?php if (!isset($return_map[$order['id']])): ?>
-                                <button class="btn-return-order" style="border-color:#8e44ad;color:#8e44ad;"
-                                    onclick="openRequestModal('return', <?php echo $order['id']; ?>)">
-                                    <i class="fa-solid fa-rotate-left me-1"></i> Yêu cầu hoàn hàng
-                                </button>
+                                <?php if ($returnAllowed): ?>
+                                    <button class="btn-return-order" style="border-color:#8e44ad;color:#8e44ad;"
+                                        onclick="openRequestModal('return', <?php echo $order['id']; ?>)">
+                                        <i class="fa-solid fa-rotate-left me-1"></i> Yêu cầu hoàn hàng
+                                    </button>
+                                <?php else: ?>
+                                    <button class="btn-return-order" style="border-color:#d0d0d0;color:#a0a0a0;opacity:0.7;cursor:not-allowed;" disabled>
+                                        <i class="fa-solid fa-rotate-left me-1"></i> Yêu cầu hoàn hàng
+                                    </button>
+                                <?php endif; ?>
                             <?php elseif ($return_map[$order['id']] === 'pending'): ?>
                                 <span style="font-size:12px;color:#8e44ad;"><i class="fa-solid fa-clock me-1"></i>Đang chờ duyệt hoàn hàng</span>
                             <?php elseif ($return_map[$order['id']] === 'approved'): ?>
                                 <span style="font-size:12px;color:#27ae60;"><i class="fa-solid fa-circle-check me-1"></i>Đã duyệt hoàn hàng</span>
                             <?php elseif ($return_map[$order['id']] === 'rejected'): ?>
                                 <span style="font-size:12px;color:#e74c3c;"><i class="fa-solid fa-circle-xmark me-1"></i>Yêu cầu hoàn bị từ chối</span>
+                            <?php endif; ?>
+                            <?php if (!isset($return_map[$order['id']]) && !$returnAllowed): ?>
+                                <div style="width:100%; text-align:right; margin-top:6px;">
+                                    <small style="color:#d9534f; font-weight:600;">
+                                        <i class="fa-solid fa-circle-exclamation me-1"></i><?php echo htmlspecialchars($returnWindowText); ?>
+                                    </small>
+                                </div>
                             <?php endif; ?>
                         <?php endif; ?>
                     </div>
