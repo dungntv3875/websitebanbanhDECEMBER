@@ -18,7 +18,7 @@ SET time_zone = "+00:00";
 /*!40101 SET NAMES utf8mb4 */;
 
 --
--- Cơ sở dữ liệu: `donut_december`
+-- Cơ sở dữ liệu: `websitebanbanhDECEMBER`
 --
 
 -- --------------------------------------------------------
@@ -99,6 +99,7 @@ CREATE TABLE `orders` (
   `note` text DEFAULT NULL,
   `total` int(11) DEFAULT NULL,
   `payment_method` varchar(20) DEFAULT 'COD',
+  `payment_status` varchar(20) NOT NULL DEFAULT 'unpaid',
   `status` varchar(50) DEFAULT 'Pending',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -167,7 +168,20 @@ CREATE TABLE `products` (
   `sale_price` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- --------------------------------------------------------
+
+-- Tạo tồn kho của tất cả sản phẩm tự đặt lại thành 30 vào ngày mới 
+SET GLOBAL event_scheduler = ON;
+
+CREATE EVENT IF NOT EXISTS reset_product_stock_daily
+ON SCHEDULE EVERY 1 DAY
+STARTS TIMESTAMP(CURRENT_DATE + INTERVAL 1 DAY)
+DO
+  UPDATE products SET stock = 30;
+
+-- ----------------------------------------------------
+--
+-- Đang đổ dữ liệu cho bảng 'products'
+--
 
 INSERT INTO `products` (`id`, `category_id`, `name`, `price`, `image`, `description`) VALUES
 (1, 1, 'Creme Brulee', 39000, '1.jpg', 'Bánh donut nhân kem custard, phủ đường khò giòn thơm mùi caramel.'),
@@ -254,18 +268,10 @@ CREATE TABLE `users` (
 --
 
 INSERT INTO `users` (`id`, `name`, `email`, `password`, `role`, `is_active`) VALUES
-(4, 'Trần Ngọc Ánh', 'anh1826@gmail.com', '$2y$10$aoQqFxeFgoCVZ9Zc31a1a.51SHoY17dieaJXuvmFWdqZHgvvShTNO', 'admin', 1),
-(5, 'Quản trị viên', 'admin@gmail.com', '$2y$10$DYotty.tGEY6DtqXs/VOuuohfLJxK4D2puNVm.rRCe8rdc1GMHJFS', 'admin', 1),
-(6, 'Ánh Trần Ngọc', 'tranngocanh@gmail.com', '$2y$10$aFGhFcz8nm91TV56qrsMQeoVLXCxJDPCWOyokOf3/r25M/YpLaxHW', 'user', 1),
-(7, 'Hưng', 'nqh@gmail.com', '$2y$10$3RiQLk36mX7kdiyVoUyoxOzaqjMqtmL1PzxDMAeB5nNS/b4yb2zaG', 'user', 1),
-(8, 'Hưng', 'nqh1234@gmail.com', '$2y$10$5Jgz6ocUmjD4VQ6foQyw7.xCEqrXlhnUJEPN5T/kpJ23LZMav9gVq', 'user', 1),
-(9, 'Ngọc Ánh', 'tranngocanh123@gmail.com', '$2y$10$RzXUaqh0QlBBah34p.XrmuoZ/d8.aOGw7.jVrfsSiNiUatGlCLUK2', 'user', 1),
-(10, 'Ngọc Ánh', 'tranngocanh1234@gmail.com', '$2y$10$UGMOUjTNTekIIDpGj6EW.OlggQqhwekyRHfhrfOJr5wP47vf0nu1q', 'user', 1);
-
---
--- Chỉ mục cho các bảng đã đổ
---
-
+(1, 'Nguyễn Thị Vân Dung', 'ntvdung826@gmail.com', '$2y$10$aoQqFxeFgoCVZ9Zc31a1a.51SHoY17dieaJXuvmFWdqZHgvvShTNO', 'admin', 1),
+(2, 'Quản trị viên', 'admin@gmail.com', '$2y$10$DYotty.tGEY6DtqXs/VOuuohfLJxK4D2puNVm.rRCe8rdc1GMHJFS', 'admin', 1),
+(3, 'Mai Nguyễn Thùy Dương', 'duongmnt@gmail.com', '$2y$10$aFGhFcz8nm91TV56qrsMQeoVLXCxJDPCWOyokOf3/r25M/YpLaxHW', 'user', 1),
+(4, 'Nguyễn Thị Mai Hoa', 'nmh@gmail.com', '$2y$10$3RiQLk36mX7kdiyVoUyoxOzaqjMqtmL1PzxDMAeB5nNS/b4yb2zaG', 'user', 1);
 --
 -- Chỉ mục cho bảng `admin_chats`
 --
@@ -417,12 +423,7 @@ ALTER TABLE `users`
 ALTER TABLE `categories`
   ADD CONSTRAINT `fk_parent` FOREIGN KEY (`parent_id`) REFERENCES `categories` (`id`) ON DELETE CASCADE;
 COMMIT;
----- Chạy 1 lần trong phpMyAdmin (tab SQL) trên database donut_december
-ALTER TABLE `orders`
-  ADD COLUMN `payment_status` VARCHAR(20) NOT NULL DEFAULT 'unpaid' AFTER `payment_method`,
--- payment_status: unpaid (chưa thanh toán / COD / chờ chuyển khoản
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
--- Chạy 1 lần trong phpMyAdmin (tab SQL) trên database donut_december
