@@ -417,6 +417,10 @@ ALTER TABLE `users`
 ALTER TABLE `categories`
   ADD CONSTRAINT `fk_parent` FOREIGN KEY (`parent_id`) REFERENCES `categories` (`id`) ON DELETE CASCADE;
 COMMIT;
+---- Chạy 1 lần trong phpMyAdmin (tab SQL) trên database donut_december
+ALTER TABLE `orders`
+  ADD COLUMN `payment_status` VARCHAR(20) NOT NULL DEFAULT 'unpaid' AFTER `payment_method`,
+-- payment_status: unpaid (chưa thanh toán / COD / chờ chuyển khoản
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
