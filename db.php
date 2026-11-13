@@ -1,7 +1,7 @@
 <?php
 // includes/db.php
 $host = 'localhost';
-$dbname = 'donut_december';
+$dbname = 'websitebanbanhDECEMBER-main';
 $username = 'root'; // Mặc định của XAMPP
 $password = '';     // Mặc định của XAMPP thường là trống
 
